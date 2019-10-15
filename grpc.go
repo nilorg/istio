@@ -1,6 +1,7 @@
 package istio
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/nilorg/pkg/logger"
@@ -11,7 +12,7 @@ import (
 
 // GrpcServer 服务端
 type GrpcServer struct {
-	ServiceName string
+	serviceName string
 	address     string
 	server      *grpc.Server
 	Log         log.Logger
@@ -26,27 +27,27 @@ func (s *GrpcServer) GetSrv() *grpc.Server {
 func (s *GrpcServer) Start() {
 	lis, err := net.Listen("tcp", s.address)
 	if err != nil {
-		s.Log.Errorf("%s grpc server failed to listen: %v", s.ServiceName, err)
+		s.Log.Errorf("%s grpc server failed to listen: %v", s.serviceName, err)
 		return
 	}
 	// 在gRPC服务器上注册反射服务。
 	reflection.Register(s.server)
 	go func() {
 		if err := s.server.Serve(lis); err != nil {
-			s.Log.Errorf("%s grpc server failed to serve: %v", s.ServiceName, err)
+			s.Log.Errorf("%s grpc server failed to serve: %v", s.serviceName, err)
 		}
 	}()
 }
 func (s *GrpcServer) Stop() {
 	if s.server == nil {
-		s.Log.Warningf("stop %s grpc server is nil", s.ServiceName)
+		s.Log.Warningf("stop %s grpc server is nil", s.serviceName)
 		return
 	}
 	s.server.Stop()
 }
 
 // NewGrpcServer 创建Grpc服务端
-func NewGrpcServer(name, address string, interceptor ...grpc.UnaryServerInterceptor) *GrpcServer {
+func NewGrpcServer(name string, address string, interceptor ...grpc.UnaryServerInterceptor) *GrpcServer {
 	var opts []grpc.ServerOption
 	for _, v := range interceptor {
 		opts = append(opts, grpc.UnaryInterceptor(v))
@@ -56,7 +57,7 @@ func NewGrpcServer(name, address string, interceptor ...grpc.UnaryServerIntercep
 		logger.Init()
 	}
 	return &GrpcServer{
-		ServiceName: name,
+		serviceName: name,
 		server:      server,
 		address:     address,
 		Log:         logger.Default(),
@@ -65,7 +66,7 @@ func NewGrpcServer(name, address string, interceptor ...grpc.UnaryServerIntercep
 
 // Client grpc客户端
 type GrpcClient struct {
-	ServiceName string
+	serviceName string
 	conn        *grpc.ClientConn // 连接
 	Log         log.Logger
 }
@@ -78,7 +79,7 @@ func (c *GrpcClient) GetConn() *grpc.ClientConn {
 // Close 关闭
 func (c *GrpcClient) Close() {
 	if c.conn == nil {
-		c.Log.Warningf("close %s grpc client is nil", c.ServiceName)
+		c.Log.Warningf("close %s grpc client is nil", c.serviceName)
 		return
 	}
 	err := c.conn.Close()
@@ -89,7 +90,7 @@ func (c *GrpcClient) Close() {
 }
 
 // NewGrpcClient 创建Grpc客户端
-func NewGrpcClient(name, serverAddress string, interceptor ...grpc.UnaryClientInterceptor) *GrpcClient {
+func NewGrpcClient(serviceName string, port int, interceptor ...grpc.UnaryClientInterceptor) *GrpcClient {
 	var opts []grpc.DialOption
 	for _, v := range interceptor {
 		opts = append(opts, grpc.WithUnaryInterceptor(v))
@@ -97,12 +98,12 @@ func NewGrpcClient(name, serverAddress string, interceptor ...grpc.UnaryClientIn
 	if logger.Default() == nil {
 		logger.Init()
 	}
-	conn, err := grpc.Dial(serverAddress, opts...)
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", serviceName, port), opts...)
 	if err != nil {
-		logger.Errorf("%s grpc client dial error: %v", name, err)
+		logger.Errorf("%s grpc client dial error: %v", serviceName, err)
 	}
 	return &GrpcClient{
-		ServiceName: name,
+		serviceName: serviceName,
 		conn:        conn,
 		Log:         logger.Default(),
 	}

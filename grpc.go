@@ -91,7 +91,9 @@ func (c *GrpcClient) Close() {
 
 // NewGrpcClient 创建Grpc客户端
 func NewGrpcClient(serviceName string, port int, interceptor ...grpc.UnaryClientInterceptor) *GrpcClient {
-	var opts []grpc.DialOption
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+	}
 	for _, v := range interceptor {
 		opts = append(opts, grpc.WithUnaryInterceptor(v))
 	}

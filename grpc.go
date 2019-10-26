@@ -23,21 +23,33 @@ func (s *GrpcServer) GetSrv() *grpc.Server {
 	return s.server
 }
 
-// Start 启动
-func (s *GrpcServer) Start() {
+func (s *GrpcServer) register() {
+	// 在gRPC服务器上注册反射服务。
+	reflection.Register(s.server)
+}
+
+// Run ...
+func (s *GrpcServer) Run() {
+	s.register()
+
 	lis, err := net.Listen("tcp", s.address)
 	if err != nil {
 		s.Log.Errorf("%s grpc server failed to listen: %v", s.serviceName, err)
 		return
 	}
-	// 在gRPC服务器上注册反射服务。
-	reflection.Register(s.server)
+	if err := s.server.Serve(lis); err != nil {
+		s.Log.Errorf("%s grpc server failed to serve: %v", s.serviceName, err)
+	}
+}
+
+// Start 启动
+func (s *GrpcServer) Start() {
 	go func() {
-		if err := s.server.Serve(lis); err != nil {
-			s.Log.Errorf("%s grpc server failed to serve: %v", s.serviceName, err)
-		}
+		s.Run()
 	}()
 }
+
+// Stop ...
 func (s *GrpcServer) Stop() {
 	if s.server == nil {
 		s.Log.Warningf("stop %s grpc server is nil", s.serviceName)
@@ -64,7 +76,7 @@ func NewGrpcServer(name string, address string, interceptor ...grpc.UnaryServerI
 	}
 }
 
-// Client grpc客户端
+// GrpcClient grpc客户端
 type GrpcClient struct {
 	serviceName string
 	conn        *grpc.ClientConn // 连接

@@ -2,8 +2,8 @@ package istio
 
 import "net/http"
 
-// GetHttpForwardHeader 获取Http跟踪Header
-func GetHttpForwardHeader(req *http.Request) http.Header {
+// GetHTTPForwardHeadergo 获取Http跟踪Header
+func GetHTTPForwardHeadergo(req *http.Request) http.Header {
 	header := http.Header{}
 	incomingHeaders := []string{
 		"x-request-id",

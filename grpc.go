@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"net"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/nilorg/pkg/logger"
 	"github.com/nilorg/sdk/log"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -59,10 +61,13 @@ func (s *GrpcServer) Stop() {
 }
 
 // NewGrpcServer 创建Grpc服务端
-func NewGrpcServer(name string, address string, interceptor ...grpc.UnaryServerInterceptor) *GrpcServer {
+func NewGrpcServer(name string, address string, streamServerInterceptors []grpc.StreamServerInterceptor, unaryServerInterceptors []grpc.UnaryServerInterceptor) *GrpcServer {
 	var opts []grpc.ServerOption
-	for _, v := range interceptor {
-		opts = append(opts, grpc.UnaryInterceptor(v))
+	if streamServerInterceptors != nil && len(streamServerInterceptors) > 0 {
+		opts = append(opts, grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamServerInterceptors...)))
+	}
+	if unaryServerInterceptors != nil && len(unaryServerInterceptors) > 0 {
+		opts = append(opts, grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryServerInterceptors...)))
 	}
 	server := grpc.NewServer(opts...)
 	if logger.Default() == nil {
@@ -102,23 +107,28 @@ func (c *GrpcClient) Close() {
 }
 
 // NewGrpcClient 创建Grpc客户端
-func NewGrpcClient(serviceName string, port int, interceptor ...grpc.UnaryClientInterceptor) *GrpcClient {
+func NewGrpcClient(serviceName string, port int, streamClientInterceptors []grpc.StreamClientInterceptor, unaryClientInterceptors []grpc.UnaryClientInterceptor) *GrpcClient {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 	}
-	for _, v := range interceptor {
-		opts = append(opts, grpc.WithUnaryInterceptor(v))
+	if streamClientInterceptors != nil && len(streamClientInterceptors) > 0 {
+		for _, v := range streamClientInterceptors {
+			opts = append(opts, grpc.WithStreamInterceptor(v))
+		}
 	}
-	if logger.Default() == nil {
-		logger.Init()
+	if unaryClientInterceptors != nil && len(unaryClientInterceptors) > 0 {
+		for _, v := range unaryClientInterceptors {
+			opts = append(opts, grpc.WithUnaryInterceptor(v))
+		}
 	}
+
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", serviceName, port), opts...)
 	if err != nil {
-		logger.Errorf("%s grpc client dial error: %v", serviceName, err)
+		logrus.Errorf("%s grpc client dial error: %v", serviceName, err)
 	}
 	return &GrpcClient{
 		serviceName: serviceName,
 		conn:        conn,
-		Log:         logger.Default(),
+		Log:         logrus.StandardLogger(),
 	}
 }

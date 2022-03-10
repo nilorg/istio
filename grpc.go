@@ -3,12 +3,14 @@ package istio
 import (
 	"fmt"
 	"net"
+	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/nilorg/pkg/logger"
 	"github.com/nilorg/sdk/log"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -63,10 +65,10 @@ func (s *GrpcServer) Stop() {
 // NewGrpcServer 创建Grpc服务端
 func NewGrpcServer(name string, address string, streamServerInterceptors []grpc.StreamServerInterceptor, unaryServerInterceptors []grpc.UnaryServerInterceptor) *GrpcServer {
 	var opts []grpc.ServerOption
-	if streamServerInterceptors != nil && len(streamServerInterceptors) > 0 {
+	if len(streamServerInterceptors) > 0 {
 		opts = append(opts, grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamServerInterceptors...)))
 	}
-	if unaryServerInterceptors != nil && len(unaryServerInterceptors) > 0 {
+	if len(unaryServerInterceptors) > 0 {
 		opts = append(opts, grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryServerInterceptors...)))
 	}
 	server := grpc.NewServer(opts...)
@@ -110,13 +112,20 @@ func (c *GrpcClient) Close() {
 func NewGrpcClient(serviceName string, port int, streamClientInterceptors []grpc.StreamClientInterceptor, unaryClientInterceptors []grpc.UnaryClientInterceptor) *GrpcClient {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
+		grpc.WithKeepaliveParams(
+			keepalive.ClientParameters{
+				Time:                10 * time.Second,
+				Timeout:             100 * time.Millisecond,
+				PermitWithoutStream: true,
+			},
+		),
 	}
-	if streamClientInterceptors != nil && len(streamClientInterceptors) > 0 {
+	if len(streamClientInterceptors) > 0 {
 		for _, v := range streamClientInterceptors {
 			opts = append(opts, grpc.WithStreamInterceptor(v))
 		}
 	}
-	if unaryClientInterceptors != nil && len(unaryClientInterceptors) > 0 {
+	if len(unaryClientInterceptors) > 0 {
 		for _, v := range unaryClientInterceptors {
 			opts = append(opts, grpc.WithUnaryInterceptor(v))
 		}

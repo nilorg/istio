@@ -7,6 +7,6 @@ require (
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/nilorg/pkg v0.0.0-20200912041345-ff40ae0f21a8
 	github.com/nilorg/sdk v0.0.0-20200912025101-a4037e6ee224
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.3
 	google.golang.org/grpc v1.53.0
 )

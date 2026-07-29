@@ -7,7 +7,7 @@ require (
 	github.com/nilorg/pkg v0.0.0-20200912041345-ff40ae0f21a8
 	github.com/nilorg/sdk v0.0.0-20200912025101-a4037e6ee224
 	github.com/sirupsen/logrus v1.9.3
-	google.golang.org/grpc v1.79.3
+	google.golang.org/grpc v1.82.1
 )
 
 require (
